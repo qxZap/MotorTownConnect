@@ -1,11 +1,5 @@
 // Motortown Connect (was Net Tuning) -- the network side, as plugins\mt_plugin_MotortownConnect.dll.
 //
-// [Connect] DirectIP=1: plain UDP/IP instead of Steam sockets, through the game's own fallback
-// (UserEngine.ini: bUseSteamNetworking=false and the IpNetDriver as GameNetDriver). Server and client
-// must agree: a DirectIP client reaches only DirectIP servers, and a Steam client never reaches one.
-// The engine reads that file before plugins run, so a change applies from the next start. The
-// lines sit between two marker comments; the rest of the file is left alone.
-//
 // The send rate: Steam sockets clamps every connection's send rate to SendRateMin..SendRateMax,
 // both 256 KB/s by default, under UE's own MaxClientRate (1 MB/s on the server). A busy server's
 // replication to each player is held to that, so updates queue and vehicles arrive late and uneven.
@@ -21,9 +15,7 @@
 // console variables. Works on the client and on the dedicated server; delete the dll to remove it, or
 // [General] Disabled=1.
 
-#include <fstream>
 #include <map>
-#include <sstream>
 #include <string>
 #include "../include/mt_plugin.hpp"
 
@@ -48,56 +40,6 @@ static int setting(const wchar_t* section, const wchar_t* key, int def) {
     return iniInt(INI, section, key, def);
 }
 
-
-// ---- DirectIP ----
-static const char* IP_BEGIN = "; Motortown Connect DirectIP";
-static const char* IP_END = "; Motortown Connect DirectIP end";
-static const char* IP_LINES =
-    "[OnlineSubsystemSteam]\r\nbUseSteamNetworking=false\r\n\r\n"
-    "[/Script/Engine.GameEngine]\r\n!NetDriverDefinitions=ClearArray\r\n"
-    "+NetDriverDefinitions=(DefName=\"GameNetDriver\",DriverClassName=\"OnlineSubsystemUtils.IpNetDriver\",DriverClassNameFallback=\"OnlineSubsystemUtils.IpNetDriver\")\r\n"
-    "+NetDriverDefinitions=(DefName=\"BeaconNetDriver\",DriverClassName=\"OnlineSubsystemUtils.IpNetDriver\",DriverClassNameFallback=\"OnlineSubsystemUtils.IpNetDriver\")\r\n"
-    "+NetDriverDefinitions=(DefName=\"DemoNetDriver\",DriverClassName=\"/Script/Engine.DemoNetDriver\",DriverClassNameFallback=\"/Script/Engine.DemoNetDriver\")\r\n";
-
-// The file's text with our block taken out, then put back at the end when on.
-static std::string withBlock(std::string text, bool on) {
-    size_t a = text.find(IP_BEGIN);
-    if (a != std::string::npos) {
-        size_t b = text.find(IP_END, a);
-        b = b == std::string::npos ? text.size() : b + strlen(IP_END);
-        while (b < text.size() && (text[b] == '\r' || text[b] == '\n')) b++;
-        text.erase(a, b - a);
-    }
-    if (on) {
-        if (!text.empty() && text.back() != '\n') text += "\r\n";
-        text += std::string(IP_BEGIN) + "\r\n" + IP_LINES + IP_END + "\r\n";
-    }
-    return text;
-}
-
-static bool selfCheck() {
-    std::string base = "[ConsoleVariables]\r\nmh.hostServerUrl=\"http://localhost:81/\"\r\n";
-    std::string on = withBlock(base, true);
-    bool ok = on.find("bUseSteamNetworking=false") != std::string::npos && withBlock(on, true) == on &&
-              withBlock(on, false) == base && withBlock(base, false) == base &&
-              withBlock("", true).find(IP_END) != std::string::npos;
-    MT_LOG("self-check: %s", ok ? "ok" : "FAILED");
-    return ok;
-}
-
-// <game>\MotorTown\Config\UserEngine.ini, from the exe in MotorTown\Binaries\Win64 (client and server alike).
-static std::wstring userEngine() { return gameDir() + L"..\\..\\Config\\UserEngine.ini"; }
-
-// True when the file had to change.
-static bool applyDirectIp(bool on) {
-    std::ifstream in(userEngine(), std::ios::binary);
-    std::stringstream ss; ss << in.rdbuf();
-    std::string was = ss.str(), want = withBlock(was, on);
-    in.close();
-    if (want == was) return false;
-    std::ofstream(userEngine(), std::ios::binary | std::ios::trunc) << want;
-    return true;
-}
 
 // ---- hitches ----
 // Live UObjects, counted on the plugin thread four times a second. A frame over 100 ms is logged with
@@ -284,12 +226,6 @@ static DWORD WINAPI run(LPVOID) {
     fFloat = api->find_object("Function", "GetConsoleVariableFloatValue", "KismetSystemLibrary");
     dedicated = wcsstr(GetCommandLineW(), L"MotorTownServer") != nullptr;
     MT_LOG("Motortown Connect loaded (%s)", dedicated ? "dedicated server" : "client");
-    if (selfCheck()) {
-        bool ip = setting(L"Connect", L"DirectIP", 0) != 0;
-        bool changed = applyDirectIp(ip);
-        MT_LOG("transport: DirectIP=%d (%s)%s", ip, ip ? "plain UDP/IP, the other side must be DirectIP too" : "Steam sockets",
-               changed ? " -- written to UserEngine.ini, applies from the next start" : "");
-    }
     fTime = api->find_object("Function", "GetTimeSeconds", "GameplayStatics");
     fpsAt = GetTickCount();
     DWORD netAt = 0;
