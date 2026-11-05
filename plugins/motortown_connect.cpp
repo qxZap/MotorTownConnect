@@ -4,7 +4,7 @@
 // (UserEngine.ini: bUseSteamNetworking=false and the IpNetDriver as GameNetDriver). Server and client
 // must agree: a DirectIP client reaches only DirectIP servers, and a Steam client never reaches one.
 // The engine reads that file before plugins run, so a change applies from the next start. The
-// lines sit between two marker comments; the rest of the file (MTNet's) is left alone.
+// lines sit between two marker comments; the rest of the file is left alone.
 //
 // The send rate: Steam sockets clamps every connection's send rate to SendRateMin..SendRateMax,
 // both 256 KB/s by default, under UE's own MaxClientRate (1 MB/s on the server). A busy server's

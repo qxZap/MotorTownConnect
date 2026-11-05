@@ -30,7 +30,7 @@ plugin's own `selfCheck()` covers the UserEngine.ini block logic and logs `self-
   Measured on a 51-player server before the fix: bursts stopping exactly at 256 KB/s.
 - **DirectIP.** Writes or removes a marked block in `MotorTown\Config\UserEngine.ini`
   (`bUseSteamNetworking=false` + IpNetDriver as GameNetDriver): the game's own `ip-fallback` transport.
-  Read by the engine before plugins run, so it applies from the next start. MTNet writes only its two keys
-  in that file, so the two coexist.
+  Read by the engine before plugins run, so it applies from the next start. Everything else in that file is
+  left as it is.
 - **Measurement.** fps/tick every 10 s, driver/connections/vehicles/cvars every 30 s, client hitches over
   100 ms with live-object-count movement.
