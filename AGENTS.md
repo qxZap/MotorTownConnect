@@ -10,7 +10,7 @@ changes. The working copy lives in the private mt_loader tree (`plugins/motortow
 
 `build.bat` (MSVC 2022 x64) writes `out\`. Install to `MotorTown\Binaries\Win64\plugins\` with the game or
 server closed. There is no test suite: the log `plugins\logs\MotortownConnect\<date>.log` is the check. The
-plugin writes nothing outside its own `motortown_connect.ini`.
+plugin's own `selfCheck()` covers the UserEngine.ini block logic and logs `self-check: ok`.
 
 ## Rules
 
@@ -28,5 +28,9 @@ plugin writes nothing outside its own `motortown_connect.ini`.
   (`SteamGameServer_GetHSteamPipe` / `SteamAPI_GetHSteamPipe`) -- before the world loads. Calling the
   networking-utils accessor before Steam is up returned null and kept doing so; hence the pipe check.
   Measured on a 51-player server before the fix: bursts stopping exactly at 256 KB/s.
+- **DirectIP.** Writes or removes a marked block in `MotorTown\Config\UserEngine.ini`
+  (`bUseSteamNetworking=false` + IpNetDriver as GameNetDriver): the game's own `ip-fallback` transport.
+  Read by the engine before plugins run, so it applies from the next start. Everything else in that file is
+  left as it is.
 - **Measurement.** fps/tick every 10 s, driver/connections/vehicles/cvars every 30 s, client hitches over
   100 ms with live-object-count movement.

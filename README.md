@@ -10,7 +10,7 @@ players burst to 150-280 KB/s for 5-15 seconds, for example when a busy area com
 those updates queue, cars arrive late and uneven, and you see rubber-banding. MotorTown Connect raises the
 cap to 1 MB/s.
 
-It changes no game data and touches no file but its own settings, so players join exactly as before. Clients need nothing.
+It changes no game data, so players join exactly as before. Clients need nothing.
 
 ## Install (dedicated server)
 
@@ -29,6 +29,7 @@ Already running the loader? Only the two files in `plugins\` are needed.
 |---|---|---|
 | `[Steam] SendRateMax` | 1048576 on a server, 0 on a client | Per-player ceiling in bytes/s. 0 leaves Steam's default (256 KB/s). Above the engine's own 1 MB/s it does nothing. |
 | `[Steam] SendRateMin` | 0 (Steam's 256 KB/s) | The lowest Steam may back off to. With many players on an upload below ~300 Mbit/s, set 65536. |
+| `[Connect] DirectIP` | 0 | 1 = the game's built-in plain UDP/IP transport instead of Steam networking. Server and every client must match, no server-list join, port forwarding needed. Experimental; applies from the next start. |
 | `[General] Disabled` | 0 | 1 = the plugin does nothing. |
 
 Budget the upload: players x SendRateMax is the worst case (100 players x 1 MB/s = 800 Mbit/s). It is a
