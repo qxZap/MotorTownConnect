@@ -31,6 +31,23 @@ inline bool isCDO(uintptr_t o) { return (get<uint32_t>(o + L().obj_flags) & 0x10
 inline std::string objName(uintptr_t o) { return name(get<uint32_t>(o + L().obj_name)); }
 inline int off(uintptr_t cls, const char* n) { return api->field_offset(cls, n); }
 
+// A component a plugin makes, never culled by distance: the maps' cull-distance volumes drop small meshes a little way
+// off (2026-11-09: brakes, flames and plates vanished at a distance). Call before FinishAddComponent, which registers
+// it. Only a PrimitiveComponent has the flag; anything else (a light) is left alone.
+inline void neverCull(uintptr_t comp) {
+    static uintptr_t cPrim; static int oFlag = -2, oCached;
+    if (oFlag == -2) {
+        cPrim = api->find_object("Class", "PrimitiveComponent", "/Script/Engine");
+        oFlag = cPrim ? off(cPrim, "bNeverDistanceCull") : -1;
+        oCached = cPrim ? off(cPrim, "CachedMaxDrawDistance") : -1;
+    }
+    if (!comp || oFlag < 0 || !api->is_a(classOf(comp), cPrim)) return;
+    uint8_t b = get<uint8_t>(comp + oFlag) | 0x08;  // bNeverDistanceCull's bit in UE 5.5 (jmap: field_mask 8)
+    wr(comp + oFlag, &b, 1);
+    float zero = 0;
+    if (oCached >= 0) wr(comp + oCached, &zero, 4);
+}
+
 // The game exe's folder (Binaries\Win64). Settings live in its plugins folder: see iniFile.
 inline std::wstring gameDir() {
     wchar_t p[MAX_PATH]; GetModuleFileNameW(nullptr, p, MAX_PATH);
