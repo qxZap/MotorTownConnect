@@ -295,6 +295,7 @@ static DWORD WINAPI run(LPVOID) {
     DWORD netAt = 0;
     DWORD countAt = 0;
     for (;;) {
+        if (api->stopping()) return 0;   // the game is closing: this thread ends with it
         DWORD now = GetTickCount();
         if (now - countAt >= 250 && api->game_thread_ready()) { countObjects(); countAt = now; }
         if (now - netAt >= 30000 && api->game_thread_ready()) {
